@@ -10,7 +10,7 @@ import (
 var procSemafor = make(chan int, MAX_CONECTION_COUNT)
 var procWaitCounter sync.WaitGroup
 
-// Ожидание свободного местечка в семафоре, и запус скачивания "в фоне"
+// Ожидание свободного местечка в семафоре, и запуск скачивания "в фоне"
 func QuiueURL(url string) {
 	procSemafor <- 1
 	go ProcessURL(url)
