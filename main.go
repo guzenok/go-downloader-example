@@ -7,6 +7,10 @@ import (
 	"os"
 )
 
+const (
+	DB_FILE_NAME = "./db"
+)
+
 var fileName = flag.String("urls", "", "имя файла с URLs")
 
 func printHelp() {
