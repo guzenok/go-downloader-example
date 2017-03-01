@@ -1,3 +1,4 @@
+// Работа с входным файлом
 package main
 
 import (
@@ -5,17 +6,16 @@ import (
 	"os"
 )
 
-func readFile(fileName *string) ([]string, error) {
-	file, err := os.Open(*fileName)
-	if err != nil {
-		return nil, err
-	}
-	defer file.Close()
+var inputFile *os.File
 
-	var lines []string
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
+func OpenFile(fileName *string) (scanner *bufio.Scanner, err error) {
+	inputFile, err = os.Open(*fileName)
+	if err == nil {
+		scanner = bufio.NewScanner(inputFile)
 	}
-	return lines, scanner.Err()
+	return scanner, err
+}
+
+func CloseFile() {
+	inputFile.Close()
 }

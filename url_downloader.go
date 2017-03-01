@@ -1,39 +1,44 @@
+// Обработка url,
 package main
 
 import (
 	"io/ioutil"
 	"net/http"
 	"sync"
-
-	"github.com/syndtr/goleveldb/leveldb"
 )
 
-func download(urls *[]string) {
-	var db, err = leveldb.OpenFile(DB_FILE_NAME, nil)
-	if err != nil {
+var procSemafor = make(chan int, MAX_CONECTION_COUNT)
+var procWaitCounter sync.WaitGroup
 
-	}
-	defer db.Close()
+// Ожидание свободного местечка в семафоре, и запус скачивания "в фоне"
+func QuiueURL(url string) {
+	procSemafor <- 1
+	go ProcessURL(url)
+}
 
-	var wg sync.WaitGroup
-	for _, url := range *urls {
-		// Increment the WaitGroup counter.
-		wg.Add(1)
-		// Launch a goroutine to fetch the URL.
-		go func(url string) {
-			// Decrement the counter when the goroutine completes.
-			defer wg.Done()
-			// Fetch the URL.
-			resp, err := http.Get(url)
-			if err == nil {
-				defer resp.Body.Close()
-				body, err := ioutil.ReadAll(resp.Body)
-				if err == nil {
-					db.Put([]byte(url), body, nil)
-				}
-			}
-		}(url)
+// Скачивание по http и сохранение в БД
+func ProcessURL(url string) {
+	// по окончании процесса обязательно освободить семафор и уменьшить счетчик процессов
+	defer func() {
+		<-procSemafor
+		procWaitCounter.Done()
+	}()
+	// увеличить счетчик процессов
+	procWaitCounter.Add(1)
+	// http-запрос
+	resp, err := http.Get(url)
+	if err == nil {
+		defer resp.Body.Close()
+		// тело ответа
+		body, err := ioutil.ReadAll(resp.Body)
+		if err == nil {
+			// запись в БД
+			Save(url, body)
+		}
 	}
-	// Wait for all HTTP fetches to complete.
-	wg.Wait()
+}
+
+// Ожидание завершения всех скачиваний
+func WaitAll() {
+	procWaitCounter.Wait()
 }

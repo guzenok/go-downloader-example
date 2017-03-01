@@ -8,7 +8,8 @@ import (
 )
 
 const (
-	DB_FILE_NAME = "./db"
+	DB_FILE_NAME        = "./db"
+	MAX_CONECTION_COUNT = 10
 )
 
 var fileName = flag.String("urls", "", "имя файла с URLs")
@@ -20,17 +21,43 @@ func printHelp() {
 }
 
 func main() {
+
+	// Разбор параметров командной строки
 	flag.Parse()
 	if *fileName == "" {
 		printHelp()
 		os.Exit(2)
 	} else {
-		var urls, err = readFile(fileName)
+
+		// Открываем входной файл
+		scanner, err := OpenFile(fileName)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while read file: %s\n", err.Error())
-			os.Exit(1)
+			fmt.Fprintf(os.Stderr, "Error while open file: %s\n", err.Error())
+			// os.Exit(1)
+			return
+		} else {
+			defer CloseFile()
 		}
-		download(&urls)
+
+		// Открываем выходную БД
+		err = OpenDB(DB_FILE_NAME)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error while open DB: %s\n", err.Error())
+			// os.Exit(1)
+			return
+		} else {
+			defer CloseDB()
+		}
+
+		// Читаем строки из файла и запускаем обработку каждого
+		for scanner.Scan() {
+			url := scanner.Text()
+			// TODO: валидация url
+			fmt.Fprintf(os.Stdout, " - begin download %s\n", url)
+			QuiueURL(url)
+		}
+
+		// Ожидание завершения всех обработок
+		WaitAll()
 	}
-	os.Exit(0)
 }
