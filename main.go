@@ -21,7 +21,8 @@ func main() {
 		printHelp()
 		os.Exit(2)
 	} else {
-		fmt.Println("Hello World! " + *fileName)
+		var urls = readFile(fileName)
+		download(&urls)
 	}
 	os.Exit(0)
 }
