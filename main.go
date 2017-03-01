@@ -21,7 +21,11 @@ func main() {
 		printHelp()
 		os.Exit(2)
 	} else {
-		var urls = readFile(fileName)
+		var urls, err = readFile(fileName)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error while read file: %s\n", err.Error())
+			os.Exit(1)
+		}
 		download(&urls)
 	}
 	os.Exit(0)

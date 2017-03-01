@@ -1,12 +1,21 @@
 package main
 
-//	"os"
+import (
+	"bufio"
+	"os"
+)
 
-func readFile(fileName *string) []string {
-	var urls = []string{
-		"http://www.golang.org/",
-		"http://www.google.com/",
-		"http://www.somestupidname.com/",
+func readFile(fileName *string) ([]string, error) {
+	file, err := os.Open(*fileName)
+	if err != nil {
+		return nil, err
 	}
-	return urls
+	defer file.Close()
+
+	var lines []string
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		lines = append(lines, scanner.Text())
+	}
+	return lines, scanner.Err()
 }
