@@ -22,6 +22,7 @@ func ProcessURL(url string) {
 	defer func() {
 		<-procSemafor
 		procWaitCounter.Done()
+		IncBarValue()
 	}()
 	// увеличить счетчик процессов
 	procWaitCounter.Add(1)

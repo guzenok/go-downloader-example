@@ -14,15 +14,15 @@ func TestWriteDB(t *testing.T) {
 	// Очистка БД
 	os.RemoveAll(DB_PATH)
 
-	// Проверка кода завершения
-	exitCode := 0
-	doAll(&TEST_FILE_NAME, &exitCode)
+	// Обработка прочих ошибок
+	defer func() {
+		if msg := recover(); msg != nil {
+			t.Fatalf("General error: %s\n", msg)
+		}
+	}()
 
-	if exitCode != 0 {
-		t.Errorf("Exit code is %d, wait 0\n", exitCode)
-		t.FailNow()
-		return
-	}
+	// Запуск основной логики
+	doAll(&TEST_FILE_NAME)
 
 	// Проверка наличия данных в БД
 	db, err := leveldb.OpenFile(DB_PATH, nil)

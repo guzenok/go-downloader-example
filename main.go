@@ -9,7 +9,7 @@ import (
 
 const (
 	DB_PATH             = "./db"
-	MAX_CONECTION_COUNT = 10
+	MAX_CONECTION_COUNT = 100
 )
 
 var fileName = flag.String("urls", "", "name of file with URLs")
@@ -18,7 +18,15 @@ func main() {
 
 	// код завершения
 	var exitCode = 0
-	defer os.Exit(exitCode)
+	defer func() {
+		if msg := recover(); msg != nil {
+			fmt.Fprint(os.Stderr, msg)
+		}
+		os.Exit(exitCode)
+	}()
+
+	// Запуск прогрессбара
+	InitBar()
 
 	// разбор параметров командной строки
 	flag.Parse()
@@ -28,27 +36,30 @@ func main() {
 		flag.PrintDefaults()
 		return
 	}
+	// код возврата на случай, если что-то пойдет не так
+	exitCode = 1
 	// основная работа
-	doAll(fileName, &exitCode)
-
+	doAll(fileName)
+	// успешное завершение
+	exitCode = 0
+	// прощальное сообщение
+	FinishBar()
+	fmt.Fprintf(os.Stdout, "Done. Result in %s\n", DB_PATH)
 }
 
-func doAll(fileName *string, exitCode *int) {
+func doAll(fileName *string) {
 
-	*exitCode = 1
 	// Открываем входной файл
 	scanner, err := OpenFile(fileName)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error while open file: %s\n", err.Error())
-		return
+		panic(fmt.Sprintf("Error while open file: %s\n", err.Error()))
 	}
 	defer CloseFile()
 
 	// Открываем выходную БД
 	err = OpenDB(DB_PATH)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error while open DB: %s\n", err.Error())
-		return
+		panic(fmt.Sprintf("Error while open DB: %s\n", err.Error()))
 	}
 	defer CloseDB()
 
@@ -56,14 +67,11 @@ func doAll(fileName *string, exitCode *int) {
 	for scanner.Scan() {
 		url := scanner.Text()
 		// TODO: валидация url
-		fmt.Fprintf(os.Stdout, " - begin download %s\n", url)
 		QuiueURL(url)
+		IncBarTotal()
 	}
 
 	// Ожидание завершения всех обработок
 	WaitAll()
 
-	// Успешное завершение
-	*exitCode = 0
-	fmt.Fprintf(os.Stdout, "Done. Result in %s\n", DB_PATH)
 }
