@@ -7,7 +7,7 @@
 Программа - принимает файл с URLs через параметр командной строки, параллельно скачивает их и сохраняет в базу syndtr/goleveldb.
 Ключ: URL, значение: содержимое страницы.
 
-Пример запуска: ./downloader -urls=./urls.txt
+Пример запуска: ./go_downloader -urls=./urls.txt
 
 Использовать библиотеки:
  - https://godoc.org/github.com/syndtr/goleveldb

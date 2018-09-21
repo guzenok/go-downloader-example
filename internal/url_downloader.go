@@ -11,8 +11,8 @@ import (
 )
 
 const (
-	MAX_CONECTION_COUNT = 10
-	DELAY_SECONDS       = 2
+	MAX_CONECTION_COUNT = 30
+	DELAY_SECONDS       = 2 // TODO: remove, for demonstration purpose only
 )
 
 var processesLimit = make(chan int, MAX_CONECTION_COUNT)
@@ -68,15 +68,21 @@ func processURL(ctx context.Context, status *Progress, wg *sync.WaitGroup, url s
 		<-processesLimit
 		status.incDone()
 	}()
-	time.Sleep(DELAY_SECONDS * time.Second)
+
+	time.Sleep(DELAY_SECONDS * time.Second) // TODO: remove, for demonstration purpose only
+
 	resp, err := ctxhttp.Get(ctx, nil, url)
-	if err == nil {
-		defer resp.Body.Close()
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			// TODO: process error
-			return
-		}
-		Save(url, body)
+	if err != nil {
+		// TODO: process error
+		//fmt.Printf(err.Error())
+		return
 	}
+	defer resp.Body.Close()
+	body, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		// TODO: process error
+		//fmt.Printf(err.Error())
+		return
+	}
+	Save(url, body)
 }

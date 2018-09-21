@@ -12,7 +12,7 @@ import (
 	"github.com/guzenok/go_downloader/internal"
 )
 
-var fileName = flag.String("urls", "", "name of file with URLs")
+var fileName = flag.String("urls", "urls.txt", "name of file with URLs")
 var dbDir = flag.String("datadir", "./db", "DB directory")
 
 func main() {
@@ -26,8 +26,7 @@ func main() {
 	}
 
 	defer func() {
-		if r := recover(); r != nil {
-			err := r.(error)
+		if err := recover(); err != nil {
 			fmt.Fprint(os.Stderr, err)
 			os.Exit(2)
 		}
@@ -35,7 +34,7 @@ func main() {
 
 	err := internal.OpenDB(*dbDir)
 	if err != nil {
-		panic(fmt.Sprintf("Error while open DB: %s\n", err.Error()))
+		panic(fmt.Errorf("Error while open DB: %s\n", err.Error()))
 	}
 	defer internal.CloseDB()
 
