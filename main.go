@@ -33,6 +33,12 @@ func main() {
 		}
 	}()
 
+	err := internal.OpenDB(*dbDir)
+	if err != nil {
+		panic(fmt.Sprintf("Error while open DB: %s\n", err.Error()))
+	}
+	defer internal.CloseDB()
+
 	ctx, cancel := context.WithCancel(context.Background())
 
 	interrupts := make(chan os.Signal, 1)
@@ -52,10 +58,9 @@ func main() {
 		}
 		progress_bar.SetTotal(status.Total)
 		progress_bar.SetCurrent(status.Done)
-
 	}
 
 	progress_bar.Finish()
 
-	fmt.Printf("%s. Result in %s\n", resume, *dbDir)
+	fmt.Printf("%s. Result DB in %s\n", resume, *dbDir)
 }

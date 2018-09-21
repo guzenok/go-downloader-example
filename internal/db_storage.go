@@ -6,17 +6,18 @@ import (
 
 var db *leveldb.DB
 
-func openDB(path string) (err error) {
+func OpenDB(path string) (err error) {
 	if db == nil {
 		db, err = leveldb.OpenFile(path, nil)
 	}
 	return err
 }
 
-func closeDB() {
+func CloseDB() {
 	db.Close()
+	db = nil
 }
 
-func save(key string, val []byte) {
+func Save(key string, val []byte) {
 	db.Put([]byte(key), val, nil)
 }
