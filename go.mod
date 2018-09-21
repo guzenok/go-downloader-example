@@ -2,6 +2,7 @@ module github.com/guzenok/go_downloader
 
 require (
 	github.com/cheggaaa/pb v2.0.6+incompatible
+	github.com/go-chi/chi v3.3.3+incompatible
 	github.com/golang/snappy v0.0.0-20180518054509-2e65f85255db // indirect
 	github.com/mattn/go-colorable v0.0.9 // indirect
 	github.com/mattn/go-isatty v0.0.4 // indirect

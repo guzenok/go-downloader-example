@@ -1,49 +1,65 @@
-// Тест
 package main
 
 import (
+	"context"
+	"fmt"
+	"net/http"
 	"os"
+	"path"
 	"testing"
 
-	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/go-chi/chi"
+	"github.com/guzenok/go_downloader/internal"
 )
 
-var TEST_FILE_NAME = "testdata/urls.txt"
+// TODO: nice tests
 
-func TestWriteDB(t *testing.T) {
-	// Очистка БД
-	os.RemoveAll(DB_PATH)
+var (
+	LOCAL_PORT = "3000"
+	URLS_COUNT = 100
+	FILE_NAME  = path.Join(os.TempDir(), "urls.txt")
+	DB_DIR     = path.Join(os.TempDir(), "go_downloader/")
+)
 
-	// Обработка прочих ошибок
+func TestGeneral(t *testing.T) {
 	defer func() {
 		if msg := recover(); msg != nil {
 			t.Fatalf("General error: %s\n", msg)
 		}
 	}()
 
-	// Запуск основной логики
-	doAll(&TEST_FILE_NAME)
-
-	// Проверка наличия данных в БД
-	db, err := leveldb.OpenFile(DB_PATH, nil)
+	os.RemoveAll(DB_DIR)
+	err := internal.OpenDB(DB_DIR)
 	if err != nil {
 		t.Fatalf("Error while open DB: %s\n", err.Error())
 	}
-	defer db.Close()
+	defer internal.CloseDB()
 
-	// И что начинаются на известные префиксы
+	err = genURLs(FILE_NAME, URLS_COUNT)
+	if err != nil {
+		t.Fatalf("Error while open DB: %s\n", err.Error())
+	}
+
+	server := startHttpServer()
+	defer server.Close()
+
+	ctx := context.TODO()
+	for _ = range internal.ProcessFile(ctx, &FILE_NAME) {
+	}
+
+	db := internal.GetDB()
 	iter := db.NewIterator(nil, nil)
-	n := 0
 	defer iter.Release()
+	n := 0
 	for iter.Next() {
 		n += 1
 		key := iter.Key()
 		value := iter.Value()
-		if string(key[0:22]) != "http://localhost:6060/" || string(value[0:15]) != "<!DOCTYPE html>" {
+		if string(key[0:17]) != "http://localhost:" || string(value[0:15]) != "<!DOCTYPE html>" {
 			t.Errorf("Error in saved data: '%s' => '%s'\n", key, value[0:15])
 		}
 	}
-	if n < 150 {
+	if n != URLS_COUNT {
 		t.Errorf("Only %d rows in DB, wait > 150", n)
 	}
 
@@ -52,4 +68,35 @@ func TestWriteDB(t *testing.T) {
 		t.Fatalf("Error while iter DB: %s\n", err.Error())
 	}
 
+}
+
+func genURLs(fileName string, count int) (err error) {
+	file, err := os.Create(fileName)
+	if err != nil {
+		return
+	}
+	defer func() {
+		err = file.Close()
+	}()
+
+	for i := 0; i < count; i++ {
+		_, err = file.WriteString(fmt.Sprintf("http://localhost:%s/?%d\n", LOCAL_PORT, i))
+		if err != nil {
+			return
+		}
+	}
+
+	return
+}
+
+func startHttpServer() *http.Server {
+	handler := chi.NewRouter()
+	handler.Get("/", func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte("<!DOCTYPE html>\n<html></html>\n"))
+	})
+	server := &http.Server{Addr: ":" + LOCAL_PORT, Handler: handler}
+	go func() {
+		_ = server.ListenAndServe()
+	}()
+	return server
 }

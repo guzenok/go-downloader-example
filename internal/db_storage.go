@@ -21,3 +21,7 @@ func CloseDB() {
 func Save(key string, val []byte) {
 	db.Put([]byte(key), val, nil)
 }
+
+func GetDB() *leveldb.DB {
+	return db
+}
