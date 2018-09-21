@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/cheggaaa/pb"
 	"github.com/guzenok/go_downloader/internal"
 )
 
@@ -42,14 +43,19 @@ func main() {
 		}
 	}()
 
-	internal.InitBar()
+	progress_bar := pb.New(0).Start()
 
-	for progress := range internal.ProcessFile(ctx, fileName) {
-		// TODO: display progress
-		_ = progress
+	resume := "Done"
+	for status := range internal.ProcessFile(ctx, fileName) {
+		if status.Interrupted {
+			resume = "Interrupted"
+		}
+		progress_bar.SetTotal(status.Total)
+		progress_bar.SetCurrent(status.Done)
+
 	}
 
-	internal.FinishBar()
+	progress_bar.Finish()
 
-	fmt.Printf("Done. Result in %s\n", *dbDir)
+	fmt.Printf("%s. Result in %s\n", resume, *dbDir)
 }

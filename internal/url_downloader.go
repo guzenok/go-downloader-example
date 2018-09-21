@@ -10,27 +10,22 @@ import (
 	"golang.org/x/net/context/ctxhttp"
 )
 
-type Progress struct {
-	read  int
-	saved int
-}
-
-var procSemafor = make(chan int, MAX_CONECTION_COUNT)
-var procWaitCounter sync.WaitGroup
-
 const (
 	MAX_CONECTION_COUNT = 10
 	DB_PATH             = "./db"
+	DELAY               = 2 // second
 )
 
+var processesLimit = make(chan int, MAX_CONECTION_COUNT)
+
 func ProcessFile(ctx context.Context, fileName *string) chan Progress {
-	progress := make(chan Progress)
-	go processFile(ctx, fileName, progress)
-	return progress
+	status := NewProgress(2 * MAX_CONECTION_COUNT)
+	go processFile(ctx, fileName, status)
+	return status.data
 }
 
-func processFile(ctx context.Context, fileName *string, progress chan<- Progress) {
-	defer close(progress)
+func processFile(ctx context.Context, fileName *string, status *Progress) {
+	defer status.close()
 
 	err := openDB(DB_PATH)
 	if err != nil {
@@ -43,40 +38,44 @@ func processFile(ctx context.Context, fileName *string, progress chan<- Progress
 		panic(fmt.Sprintf("Error while open file: %s\n", err.Error()))
 	}
 	defer CloseFile()
+
+	var wg sync.WaitGroup
+
 READING:
 	for file.Scan() {
 		select {
 		case <-ctx.Done():
+			status.interrupt()
 			break READING
 		default:
-			IncBarTotal()
+			status.incTotal()
 			url := file.Text()
-			quiueURL(ctx, url)
+			queueURL(ctx, status, &wg, url)
 		}
 	}
 
-	procWaitCounter.Wait()
+	wg.Wait()
 }
 
-func quiueURL(ctx context.Context, url string) {
-	// TODO: валидация url
+func queueURL(ctx context.Context, status *Progress, wg *sync.WaitGroup, url string) {
+	// TODO: validate url
 	select {
 	case <-ctx.Done():
 		return
-	case procSemafor <- 1:
+	case processesLimit <- 1:
 		subctx, _ := context.WithCancel(ctx)
-		go processURL(subctx, url)
+		go processURL(subctx, status, wg, url)
 	}
 }
 
-func processURL(ctx context.Context, url string) {
-	procWaitCounter.Add(1)
+func processURL(ctx context.Context, status *Progress, wg *sync.WaitGroup, url string) {
+	wg.Add(1)
 	defer func() {
-		procWaitCounter.Done()
-		<-procSemafor
-		IncBarValue()
+		wg.Done()
+		<-processesLimit
+		status.incDone()
 	}()
-	time.Sleep(2 * time.Second)
+	time.Sleep(DELAY * time.Second)
 	resp, err := ctxhttp.Get(ctx, nil, url)
 	if err == nil {
 		defer resp.Body.Close()
