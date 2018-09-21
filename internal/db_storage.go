@@ -7,7 +7,9 @@ import (
 var db *leveldb.DB
 
 func openDB(path string) (err error) {
-	db, err = leveldb.OpenFile(path, nil)
+	if db == nil {
+		db, err = leveldb.OpenFile(path, nil)
+	}
 	return err
 }
 
