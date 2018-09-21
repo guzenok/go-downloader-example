@@ -5,16 +5,17 @@ import (
 	"os"
 )
 
-var inputFile *os.File
+func OpenFile(fileName *string) (scanner *bufio.Scanner, close func(), err error) {
+	var inputFile *os.File
 
-func OpenFile(fileName *string) (scanner *bufio.Scanner, err error) {
 	inputFile, err = os.Open(*fileName)
 	if err == nil {
 		scanner = bufio.NewScanner(inputFile)
 	}
-	return scanner, err
-}
 
-func CloseFile() {
-	inputFile.Close()
+	close = func() {
+		inputFile.Close()
+	}
+
+	return
 }

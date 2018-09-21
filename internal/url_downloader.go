@@ -33,11 +33,11 @@ func processFile(ctx context.Context, fileName *string, status *Progress) {
 	}
 	defer closeDB()
 
-	file, err := OpenFile(fileName)
+	file, closeFile, err := OpenFile(fileName)
 	if err != nil {
 		panic(fmt.Sprintf("Error while open file: %s\n", err.Error()))
 	}
-	defer CloseFile()
+	defer closeFile()
 
 	var wg sync.WaitGroup
 
