@@ -1,40 +1,63 @@
 package internal
 
-import (
-	"sync/atomic"
-)
-
-type Progress struct {
+type Status struct {
 	Total       int64
 	Done        int64
 	Interrupted bool
-	data        chan Progress
+}
+
+type Progress struct {
+	Status
+	total       chan int64
+	done        chan int64
+	interrupted chan bool
+	status      chan Status
 }
 
 func NewProgress(capacity int) *Progress {
-	return &Progress{
-		Total:       0,
-		Done:        0,
-		Interrupted: false,
-		data:        make(chan Progress, capacity),
+	p := &Progress{
+		total:       make(chan int64, capacity),
+		done:        make(chan int64, capacity),
+		interrupted: make(chan bool, capacity),
+		status:      make(chan Status, capacity),
 	}
+	go p.notify()
+	return p
 }
 
 func (p *Progress) incTotal() {
-	atomic.AddInt64(&p.Total, 1)
-	p.data <- *p
+	p.total <- 1
 }
 
 func (p *Progress) incDone() {
-	atomic.AddInt64(&p.Done, 1)
-	p.data <- *p
+	p.done <- 1
 }
 
 func (p *Progress) interrupt() {
-	p.Interrupted = true
-	p.data <- *p
+	p.interrupted <- true
 }
 
 func (p *Progress) close() {
-	close(p.data)
+	p.interrupted <- false
+}
+
+func (p *Progress) notify() {
+	closed := false
+	for {
+		select {
+		case val := <-p.total:
+			p.Total += val
+		case val := <-p.done:
+			p.Done += val
+		case val := <-p.interrupted:
+			p.Interrupted = p.Interrupted || val
+			closed = true
+		}
+		p.status <- p.Status
+
+		if closed {
+			close(p.status)
+			break
+		}
+	}
 }
