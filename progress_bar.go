@@ -1,21 +1,18 @@
-// progress_bar
 package main
 
 import (
-	"sync/atomic"
-
-	"gopkg.in/cheggaaa/pb.v1"
+	"github.com/cheggaaa/pb"
 )
 
 var bar *pb.ProgressBar
 
 func InitBar() {
-	bar = pb.New(0).SetUnits(pb.U_NO).Start()
+	bar = pb.New(0).Start()
 }
 
 func IncBarTotal() {
 	if bar != nil {
-		atomic.AddInt64(&bar.Total, 1)
+		bar.SetTotal(bar.Total() + 1)
 	}
 }
 
