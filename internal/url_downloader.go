@@ -1,79 +1,90 @@
 package internal
 
 import (
+	"context"
 	"fmt"
 	"io/ioutil"
-	"net/http"
 	"sync"
+	"time"
+
+	"golang.org/x/net/context/ctxhttp"
 )
+
+type Progress struct {
+	read  int
+	saved int
+}
 
 var procSemafor = make(chan int, MAX_CONECTION_COUNT)
 var procWaitCounter sync.WaitGroup
 
 const (
-	MAX_CONECTION_COUNT = 100
+	MAX_CONECTION_COUNT = 10
 	DB_PATH             = "./db"
 )
 
-func ProcessFile(fileName *string) {
+func ProcessFile(ctx context.Context, fileName *string) chan Progress {
+	progress := make(chan Progress)
+	go processFile(ctx, fileName, progress)
+	return progress
+}
 
-	// Открываем входной файл
-	scanner, err := OpenFile(fileName)
-	if err != nil {
-		panic(fmt.Sprintf("Error while open file: %s\n", err.Error()))
-	}
-	defer CloseFile()
+func processFile(ctx context.Context, fileName *string, progress chan<- Progress) {
+	defer close(progress)
 
-	// Открываем выходную БД
-	err = openDB(DB_PATH)
+	err := openDB(DB_PATH)
 	if err != nil {
 		panic(fmt.Sprintf("Error while open DB: %s\n", err.Error()))
 	}
 	defer closeDB()
 
-	// Читаем строки из файла и запускаем обработку каждого
-	for scanner.Scan() {
-		url := scanner.Text()
-		// TODO: валидация url
-		quiueURL(url)
-		IncBarTotal()
+	file, err := OpenFile(fileName)
+	if err != nil {
+		panic(fmt.Sprintf("Error while open file: %s\n", err.Error()))
 	}
-
-	// Ожидание завершения всех обработок
-	waitAll()
-
-}
-
-// Ожидание свободного местечка в семафоре, и запуск скачивания "в фоне"
-func quiueURL(url string) {
-	procSemafor <- 1
-	go processURL(url)
-}
-
-// Скачивание по http и сохранение в БД
-func processURL(url string) {
-	// по окончании процесса обязательно освободить семафор и уменьшить счетчик процессов
-	defer func() {
-		<-procSemafor
-		procWaitCounter.Done()
-		IncBarValue()
-	}()
-	// увеличить счетчик процессов
-	procWaitCounter.Add(1)
-	// http-запрос
-	resp, err := http.Get(url)
-	if err == nil {
-		defer resp.Body.Close()
-		// тело ответа
-		body, err := ioutil.ReadAll(resp.Body)
-		if err == nil {
-			// запись в БД
-			save(url, body)
+	defer CloseFile()
+READING:
+	for file.Scan() {
+		select {
+		case <-ctx.Done():
+			break READING
+		default:
+			IncBarTotal()
+			url := file.Text()
+			quiueURL(ctx, url)
 		}
 	}
+
+	procWaitCounter.Wait()
 }
 
-// Ожидание завершения всех скачиваний
-func waitAll() {
-	procWaitCounter.Wait()
+func quiueURL(ctx context.Context, url string) {
+	// TODO: валидация url
+	select {
+	case <-ctx.Done():
+		return
+	case procSemafor <- 1:
+		subctx, _ := context.WithCancel(ctx)
+		go processURL(subctx, url)
+	}
+}
+
+func processURL(ctx context.Context, url string) {
+	procWaitCounter.Add(1)
+	defer func() {
+		procWaitCounter.Done()
+		<-procSemafor
+		IncBarValue()
+	}()
+	time.Sleep(2 * time.Second)
+	resp, err := ctxhttp.Get(ctx, nil, url)
+	if err == nil {
+		defer resp.Body.Close()
+		body, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			// TODO: process error
+			return
+		}
+		save(url, body)
+	}
 }
