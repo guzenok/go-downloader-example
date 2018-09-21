@@ -1,5 +1,4 @@
-// Работа с целевой БД
-package main
+package internal
 
 import (
 	"github.com/syndtr/goleveldb/leveldb"
@@ -7,18 +6,22 @@ import (
 
 var db *leveldb.DB
 
-// Открыть
 func OpenDB(path string) (err error) {
-	db, err = leveldb.OpenFile(path, nil)
+	if db == nil {
+		db, err = leveldb.OpenFile(path, nil)
+	}
 	return err
 }
 
-// Закрыть
 func CloseDB() {
 	db.Close()
+	db = nil
 }
 
-// Записать
 func Save(key string, val []byte) {
 	db.Put([]byte(key), val, nil)
+}
+
+func GetDB() *leveldb.DB {
+	return db
 }

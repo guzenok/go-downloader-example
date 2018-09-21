@@ -1,2 +1,5 @@
+*.swp
+*.swo
 *.exe
-db
+go_downloader
+db/
