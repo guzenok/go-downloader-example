@@ -1,18 +1,15 @@
-// downloader
 package main
 
 import (
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/guzenok/go_downloader/internal"
 )
 
-const (
-	DB_PATH             = "./db"
-	MAX_CONECTION_COUNT = 100
-)
-
-var fileName = flag.String("urls", "", "name of file with URLs")
+var fileName = flag.String("urls", "urls.txt", "name of file with URLs")
+var dbDir = flag.String("datadir", "./db", "DB directory")
 
 func main() {
 
@@ -26,7 +23,7 @@ func main() {
 	}()
 
 	// Запуск прогрессбара
-	InitBar()
+	internal.InitBar()
 
 	// разбор параметров командной строки
 	flag.Parse()
@@ -39,39 +36,10 @@ func main() {
 	// код возврата на случай, если что-то пойдет не так
 	exitCode = 1
 	// основная работа
-	doAll(fileName)
+	internal.ProcessFile(fileName)
 	// успешное завершение
 	exitCode = 0
 	// прощальное сообщение
-	FinishBar()
-	fmt.Fprintf(os.Stdout, "Done. Result in %s\n", DB_PATH)
-}
-
-func doAll(fileName *string) {
-
-	// Открываем входной файл
-	scanner, err := OpenFile(fileName)
-	if err != nil {
-		panic(fmt.Sprintf("Error while open file: %s\n", err.Error()))
-	}
-	defer CloseFile()
-
-	// Открываем выходную БД
-	err = OpenDB(DB_PATH)
-	if err != nil {
-		panic(fmt.Sprintf("Error while open DB: %s\n", err.Error()))
-	}
-	defer CloseDB()
-
-	// Читаем строки из файла и запускаем обработку каждого
-	for scanner.Scan() {
-		url := scanner.Text()
-		// TODO: валидация url
-		QuiueURL(url)
-		IncBarTotal()
-	}
-
-	// Ожидание завершения всех обработок
-	WaitAll()
-
+	internal.FinishBar()
+	fmt.Fprintf(os.Stdout, "Done. Result in %s\n", *dbDir)
 }

@@ -1,5 +1,4 @@
-// Работа с входным файлом
-package main
+package internal
 
 import (
 	"bufio"
