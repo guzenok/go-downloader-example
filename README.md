@@ -1,8 +1,8 @@
-# go_downloader
+# downloader
 
-Тестовое задание.
+тестовое задание
 
-## ТЗ
+## Задание
 
 Программа - принимает файл с URLs через параметр командной строки, параллельно скачивает их и сохраняет в базу syndtr/goleveldb.
 Ключ: URL, значение: содержимое страницы.
@@ -22,3 +22,12 @@
 И подходы:
  - https://blog.golang.org/share-memory-by-communicating
  - https://blog.golang.org/concurrency-is-not-parallelism
+
+
+## Решение
+
+```
+for q in $(echo {10..100}); do echo "https://www.google.com/search?q=1${q}"; done > urls.txt
+go run ./main.go -urls=./urls.txt
+rm -f urls.txt
+```
